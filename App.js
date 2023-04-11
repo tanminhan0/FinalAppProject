@@ -1,11 +1,13 @@
 import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import { Button, Text, View, Image,StyleSheet, TouchableOpacity, Alert } from 'react-native'
+import { Button, Text, View, Image,StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native'
 import { useState, useEffect } from 'react'
 import ImgPicker from './Image'
 import {sendPushNotificationHandler,AddNotificationReceivedListener, AddNotificationResponseReceivedListener, configurePushNotifications } from './notifications'
 import * as Location from 'expo-location';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
 
 const Stack = createNativeStackNavigator()
 
@@ -37,15 +39,15 @@ export default App = () => {
           options={{ title: 'Profile' }}
         />
         <Stack.Screen
-          name="ScheduleTimetable"
-          component={ScheduleTimetableScreen}
-          options={{ title: 'Scheduled Shifts' }}
+          name="ViewShift"
+          component={ViewScreen}
+          options={{ title: 'View Shifts' }}
         />
-        {/* <Stack.Screen
-          name="ScheduleOwnShifts"
-          component={ScheduleOwnScreen}
+        <Stack.Screen
+          name="ScheduleShift"
+          component={ScheduleScreen}
           options={{ title: 'Scheduled Own Shifts' }}
-        /> */}
+        />
         <Stack.Screen
           name="CheckIn"
           component={WorkCheckInScreen}
@@ -63,12 +65,12 @@ const ProfileScreen = ({ navigation }) => {
       <Image source={profilePic} style={styles.profilePic} />
       <Text style={styles.name}>TAN MIN HAN</Text>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('ScheduleTimetable')}>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('ViewShift')}>
         <Text style={styles.buttonText}>View Scheduled Shifts</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('ScheduleOwnShifts')}>
-        <Text style={styles.buttonText}>Schedule Your Shifts</Text>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('ScheduleShift')}>
+        <Text style={styles.buttonText}>Schedule Shifts</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('CheckIn')}>
@@ -78,37 +80,116 @@ const ProfileScreen = ({ navigation }) => {
   )
 }
 
-const ScheduleTimetableScreen = () => {
-  const [text, setText] = useState('. . . waiting for fetch API')
+const ViewScreen = () => {
+  const [scheduledShifts, setScheduledShifts] = useState([]);
 
-  const callAPI = async () => {
+  useEffect(() => {
+    // Fetch scheduled shifts from database and update state
+    fetch('/scheduledShifts')
+      .then(response => response.json())
+      .then(data => setScheduledShifts(data))
+      .catch(error => console.error(error));
+  }, []);
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Scheduled Shifts</Text>
+      {scheduledShifts.length > 0 ? (
+        <FlatList
+          data={scheduledShifts}
+          keyExtractor={item => item._id}
+          renderItem={({ item }) => (
+            <View style={styles.shiftContainer}>
+              <Text style={styles.shiftTitle}>Shift {item._id}</Text>
+              <Text style={styles.shiftText}>Start Time: {item.startTime}</Text>
+              <Text style={styles.shiftText}>End Time: {item.endTime}</Text>
+              <Text style={styles.shiftText}>Employees: {item.employees.join(', ')}</Text>
+            </View>
+          )}
+        />
+      ) : (
+        <Text style={styles.noShiftsText}>No scheduled shifts found</Text>
+      )}
+    </View>
+  );
+};
+
+
+const ScheduleScreen = () => {
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+
+  const handleStartDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || startDate;
+    setShowStartDatePicker(Platform.OS === 'ios');
+    setStartDate(currentDate);
+  };
+
+  const handleEndDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || endDate;
+    setShowEndDatePicker(Platform.OS === 'ios');
+    setEndDate(currentDate);
+  };
+
+  const showStartDatepicker = () => {
+    setShowStartDatePicker(true);
+  };
+
+  const showEndDatepicker = () => {
+    setShowEndDatePicker(true);
+  };
+ 
+  const handleSubmit = async () => {
+    console.log(startDate)
+    console.log(endDate)
     try {
       const res = await fetch(
-        `https://a04a-193-1-57-1.eu.ngrok.io`,
+        `https://1aa2-193-1-57-1.ngrok-free.app/scheduleShift`,
         {
-          method: 'GET',
+          method: 'POST',
           headers: {
+            'Content-Type': 'application/json',
             "ngrok-skip-browser-warning": "69420"
           },
+          body: JSON.stringify(
+            {
+              startTime: startDate.toISOString(),
+              endTime: endDate.toISOString()
+            }
+          )
         }
       );
       const data = await res.json();
       console.log(data);
-      setText(JSON.stringify(data))
     } catch (err) {
       console.log(err);
     }
   }
 
   return (
-    <View>
-      <Text>{text}</Text>
-      <Button
-        title="Go Fetch Some Quotes" onPress={async () => callAPI()}
-      />
+    <View style={styles.container}>
+      <Text style={styles.title}>Schedule Shifts</Text>
+      <TouchableOpacity style={styles.datePickerButton} onPress={showStartDatepicker}>
+        <Text style={styles.datePickerButtonText}>Start Date: {startDate.toLocaleString()}</Text>
+      </TouchableOpacity>
+      {showStartDatePicker && (
+        <DateTimePicker value={startDate} mode='datetime' is24Hour={true} display='default' onChange={handleStartDateChange} />
+      )}
+      <TouchableOpacity style={styles.datePickerButton} onPress={showEndDatepicker}>
+        <Text style={styles.datePickerButtonText}>End Date: {endDate.toLocaleString()}</Text>
+      </TouchableOpacity>
+      {showEndDatePicker && (
+        <DateTimePicker value={endDate} mode='datetime' is24Hour={true} display='default' onChange={handleEndDateChange} />
+      )}
+      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+        <Text style={styles.submitButtonText}>Submit</Text>
+      </TouchableOpacity>
     </View>
-  )
+  );
 };
+
 
 const WorkCheckInScreen = () => {
   const [location, setLocation] = useState(null);
@@ -180,8 +261,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
   },
   title: {
+    flex:1,
     position: 'absolute',
-    width: 150,
     height: 45,
     fontWeight:'bold',
     fontSize: 32,
@@ -243,5 +324,45 @@ const styles = StyleSheet.create({
     color: 'white',
     padding: 12,
     borderRadius: 8,
+  },
+  datePickerButton: {
+    padding: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginBottom: 30,
+  },
+  datePickerButtonText: {
+    fontSize: 16,
+  },
+  submitButton: {
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: '#00bfff',
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+
+  //ViewShift
+  shiftContainer: {
+    backgroundColor: '#eee',
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 5,
+  },
+  shiftTitle: {
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  shiftText: {
+    fontSize: 16,
+    marginBottom: 3,
+  },
+  noShiftsText: {
+    fontSize: 18,
+    fontStyle: 'italic',
   },
 })
