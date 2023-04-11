@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { Button, Text, View, Image,StyleSheet, TouchableOpacity, Alert } from 'react-native'
 import { useState, useEffect } from 'react'
 import ImgPicker from './Image'
-import {AddNotificationReceivedListener, AddNotificationResponseReceivedListener, configurePushNotifications } from './notifications'
+import {sendPushNotificationHandler,AddNotificationReceivedListener, AddNotificationResponseReceivedListener, configurePushNotifications } from './notifications'
 import * as Location from 'expo-location';
 
 const Stack = createNativeStackNavigator()
@@ -123,8 +123,6 @@ const WorkCheckInScreen = () => {
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(location);
     })();
   }, []);
 
@@ -144,6 +142,8 @@ const WorkCheckInScreen = () => {
         'Check In Successfully!',
         'Checked in with location and time!'
       );
+      sendPushNotificationHandler('Conor');
+
     } catch (error) {
       setLocation(null);
       setErrorMsg(error.message);
@@ -239,9 +239,9 @@ const styles = StyleSheet.create({
     bottom: 200,
   },
   checkInButton: {
-    backgroundColor: 'lightblue',
+    backgroundColor: 'lightpink',
     color: 'white',
-    padding: 10,
-    borderRadius: 5,
+    padding: 12,
+    borderRadius: 8,
   },
 })
