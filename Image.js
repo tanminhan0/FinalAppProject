@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View, TouchableOpacity, Image, Text, StyleSheet, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Permissions from 'expo-permissions';
-import { sendPushNotificationHandler } from './notifications'
 
 export const ImgPicker = props => {
   const [pickedImage, setPickedImage] = useState();
@@ -31,13 +30,13 @@ export const ImgPicker = props => {
       return;
     }
     const image = await ImagePicker.launchCameraAsync({
+      cameraType: 'front',
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.5
     });
 
     setPickedImage(image.uri);
-    sendPushNotificationHandler('Conor');
 
   };
 
