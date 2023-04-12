@@ -86,6 +86,19 @@ router.get('/scheduledshifts', (req, res, next) => {
   })
 });
 
+router.delete('/deleteShift', (req, res, next) => {
+  ScheduledShift.findOneAndRemove({ _id: req.body._id}) 
+    .then(resp => {
+      //res.redirect('/')
+      console.log('deleted schedule')
+
+    })
+    .catch(err => {
+      console.log('Failed to find schedule: ' + err)
+      res.send('No schedule found')
+    })
+})
+
 // router.post('/', (req, res, next) => {
 //   console.log(req.body.testData)
 //   Product.find() // Always returns an array

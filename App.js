@@ -105,8 +105,6 @@ const ViewScreen = () => {
 
         }
       );
-
-
       const data = await res.json();
       console.log(data);
       if (res.ok) {
@@ -119,6 +117,28 @@ const ViewScreen = () => {
     }
   }
 
+  const deleteAPI = async (id) => {
+    try {
+      const res = await fetch(
+        `https://7478-193-1-57-1.ngrok-free.app/deleteShift`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+            "ngrok-skip-browser-warning": "69420"
+          },
+          body: JSON.stringify(
+            {
+              _id: id,
+            }),
+        }
+      );
+      const data = await res.json();
+      console.log("Deleted Schedule" + data);
+    } catch (err) {
+      console.log(err);
+    }
+  }
   const handlePressShift = (item) => {
     // set editShift to the selected shift for editing
     setEditShift(item);
@@ -155,6 +175,7 @@ const ViewScreen = () => {
               (shift) => shift._id !== item._id
             );
             setScheduledShifts(updatedScheduledShifts);
+            deleteAPI(item._id);
           },
         },
       ],
