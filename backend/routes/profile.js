@@ -38,7 +38,7 @@ const ScheduledShift = mongoose.model('ScheduledShift', scheduledShiftSchema);
 
 let nextUserId = 0;
 
-Product.find().then(products =>{
+User.find().then(products =>{
     var latestId = 0;
     for(var count= 0; count< products.length ; count++){
       var id = Number(products[count].userId)
@@ -76,15 +76,15 @@ router.post('/scheduleShift', (req, res, next) => {
 
 router.get('/scheduledshifts', (req, res, next) => {
   ScheduledShift.find()
-    .exec((err, shifts) => {
-      if (err) {
-        console.log('Failed to find scheduled shifts: ' + err)
-        res.send('Failed to find scheduled shifts')
-      } else {
-        res.render('scheduledshifts', { shifts: shifts })
-      }
-    })
-})
+  .exec((err, shifts) => {
+    if (err) {
+      console.log('Failed to find scheduled shifts: ' + err)
+      res.status(500).json({ error: 'Failed to find scheduled shifts' });
+    } else {
+      res.status(200).json({ shifts: shifts });
+    }
+  })
+});
 
 // router.post('/', (req, res, next) => {
 //   console.log(req.body.testData)

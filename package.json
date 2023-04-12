@@ -1,5 +1,5 @@
 {
-  "name": "awesomeproject",
+  "name": "Workees",
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
@@ -22,6 +22,7 @@
     "expo-permissions": "^14.1.1",
     "expo-status-bar": "~1.4.2",
     "fa-icons": "^0.2.0",
+    "moment": "^2.29.4",
     "prop-types": "^15.8.1",
     "react": "18.1.0",
     "react-icons": "^4.8.0",

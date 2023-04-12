@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import { Button, Text, View, Image,StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native'
+import { Button, Text, View, Image, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native'
 import { useState, useEffect } from 'react'
 import ImgPicker from './Image'
-import {sendPushNotificationHandler,AddNotificationReceivedListener, AddNotificationResponseReceivedListener, configurePushNotifications } from './notifications'
+import { sendPushNotificationHandler, AddNotificationReceivedListener, AddNotificationResponseReceivedListener, configurePushNotifications } from './notifications'
 import * as Location from 'expo-location';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import moment from 'moment';
 
 
 const Stack = createNativeStackNavigator()
@@ -20,7 +21,7 @@ export default App = () => {
     configurePushNotifications();
   }, []);
 
-  
+
   useEffect(() => {
     const subscription1 = AddNotificationReceivedListener()
     const subscription2 = AddNotificationResponseReceivedListener()
@@ -32,7 +33,7 @@ export default App = () => {
   }, []);
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{headerShown: false}}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen
           name="Home"
           component={ProfileScreen}
@@ -82,38 +83,154 @@ const ProfileScreen = ({ navigation }) => {
 
 const ViewScreen = () => {
   const [scheduledShifts, setScheduledShifts] = useState([]);
+  const [editShift, setEditShift] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateTimePickerValue, setDateTimePickerValue] = useState(null);
 
   useEffect(() => {
     // Fetch scheduled shifts from database and update state
-    fetch('/scheduledShifts')
-      .then(response => response.json())
-      .then(data => setScheduledShifts(data))
-      .catch(error => console.error(error));
+    viewAPI();
   }, []);
+
+  const viewAPI = async () => {
+
+    try {
+      const res = await fetch(
+        `https://7478-193-1-57-1.ngrok-free.app/scheduledshifts`,
+        {
+          method: 'GET',
+          headers: {
+            "ngrok-skip-browser-warning": "69420"
+          },
+
+        }
+      );
+
+
+      const data = await res.json();
+      console.log(data);
+      if (res.ok) {
+        setScheduledShifts(data.shifts);
+      } else {
+        console.log('Failed to fetch scheduled shifts');
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  const handlePressShift = (item) => {
+    // set editShift to the selected shift for editing
+    setEditShift(item);
+    setShowDatePicker(true);
+    setDateTimePickerValue(new Date(item.startTime));
+  }
+
+  const handleEditShift = () => {
+    // update scheduledShifts with the edited shift
+    const updatedScheduledShifts = scheduledShifts.map((shift) => {
+      if (shift._id === editShift._id) {
+        const updatedShift = { ...shift };
+        updatedShift.startTime = dateTimePickerValue;
+        updatedShift.endTime = moment(dateTimePickerValue).add(8, 'hours').toDate();
+        return updatedShift;
+      }
+      return shift;
+    });
+    setScheduledShifts(updatedScheduledShifts);
+    setEditShift(null);
+  }
+
+  const handleDeleteShift = (item) => {
+    Alert.alert(
+      'Confirm Delete',
+      'Are you sure you want to delete this shift?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            const updatedScheduledShifts = scheduledShifts.filter(
+              (shift) => shift._id !== item._id
+            );
+            setScheduledShifts(updatedScheduledShifts);
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  }
+
+  const handleDateTimePickerChange = (event, selectedDate) => {
+    setDateTimePickerValue(selectedDate);
+  };
+
+  const handleDateTimePickerCancel = () => {
+    setShowDatePicker(false);
+    setEditShift(null);
+  };
+
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Scheduled Shifts</Text>
       {scheduledShifts.length > 0 ? (
         <FlatList
+          scrollEnabled={false} // add scrollEnabled prop
           data={scheduledShifts}
           keyExtractor={item => item._id}
           renderItem={({ item }) => (
-            <View style={styles.shiftContainer}>
-              <Text style={styles.shiftTitle}>Shift {item._id}</Text>
-              <Text style={styles.shiftText}>Start Time: {item.startTime}</Text>
-              <Text style={styles.shiftText}>End Time: {item.endTime}</Text>
-              <Text style={styles.shiftText}>Employees: {item.employees.join(', ')}</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.shiftContainer}
+              onPress={() => {
+                // handle press on shift functionality
+                console.log("Shift pressed: ", item._id);
+                handlePressShift(item)
+              }}
+            >
+              <View style={styles.shiftInfo}>
+                <Text style={styles.shiftDate}>{moment(item.startTime).format('dddd MMMM D')}</Text>
+                <Text style={styles.shiftTime}>{moment(item.startTime).format('h:mm A')} - {moment(item.endTime).format('h:mm A')}</Text>
+              </View>
+              <View style={styles.shiftActions}>
+
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeleteShift(item)}
+                >
+                  <Text style={styles.shiftButtonText}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
           )}
         />
       ) : (
-        <Text style={styles.noShiftsText}>No scheduled shifts found</Text>
+          <Text style={styles.noShiftsText}>No scheduled shifts found</Text>
+        )}
+
+      {showDatePicker && (
+        <DateTimePicker
+          value={dateTimePickerValue}
+          mode="datetime"
+          is24Hour={true}
+          display="default"
+          style={{ position: 'absolute', alignSelf:'center', bottom: 130 }}
+          onChange={handleDateTimePickerChange}
+          onCancel={handleDateTimePickerCancel}
+        />
+      )}
+      {editShift && (
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={handleEditShift}>
+          <Text style={styles.editButtonText}>Edit Shift</Text>
+        </TouchableOpacity>
       )}
     </View>
   );
 };
-
+//------------------------------------------------------------------------
 
 const ScheduleScreen = () => {
   const [startDate, setStartDate] = useState(new Date());
@@ -140,13 +257,17 @@ const ScheduleScreen = () => {
   const showEndDatepicker = () => {
     setShowEndDatePicker(true);
   };
- 
+
   const handleSubmit = async () => {
     console.log(startDate)
     console.log(endDate)
+    Alert.alert(
+      'Scheduled Shift!!',
+      'Your shifts is scheduled successfully!'
+    );
     try {
       const res = await fetch(
-        `https://1aa2-193-1-57-1.ngrok-free.app/scheduleShift`,
+        `https://7478-193-1-57-1.ngrok-free.app/scheduleShift`,
         {
           method: 'POST',
           headers: {
@@ -155,12 +276,14 @@ const ScheduleScreen = () => {
           },
           body: JSON.stringify(
             {
-              startTime: startDate.toISOString(),
-              endTime: endDate.toISOString()
+              startTime: startDate,
+              endTime: endDate
             }
           )
         }
       );
+
+
       const data = await res.json();
       console.log(data);
     } catch (err) {
@@ -175,13 +298,15 @@ const ScheduleScreen = () => {
         <Text style={styles.datePickerButtonText}>Start Date: {startDate.toLocaleString()}</Text>
       </TouchableOpacity>
       {showStartDatePicker && (
-        <DateTimePicker value={startDate} mode='datetime' is24Hour={true} display='default' onChange={handleStartDateChange} />
+        <DateTimePicker value={startDate} mode='datetime' is24Hour={true} minuteInterval={30}
+          display='default' onChange={handleStartDateChange} />
       )}
       <TouchableOpacity style={styles.datePickerButton} onPress={showEndDatepicker}>
         <Text style={styles.datePickerButtonText}>End Date: {endDate.toLocaleString()}</Text>
       </TouchableOpacity>
       {showEndDatePicker && (
-        <DateTimePicker value={endDate} mode='datetime' is24Hour={true} display='default' onChange={handleEndDateChange} />
+        <DateTimePicker value={endDate} mode='datetime' is24Hour={true} minuteInterval={30}
+          display='default' onChange={handleEndDateChange} />
       )}
       <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
         <Text style={styles.submitButtonText}>Submit</Text>
@@ -261,14 +386,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7F7F7',
   },
   title: {
-    flex:1,
+    flex: 1,
     position: 'absolute',
     height: 45,
-    fontWeight:'bold',
+    fontWeight: 'bold',
     fontSize: 32,
-    lineHeight:38,
-    bottom:789,
-    color:'#2D4059',
+    lineHeight: 38,
+    bottom: 789,
+    color: '#2D4059',
   },
   profilePic: {
     width: 128,
@@ -280,8 +405,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 32,
-    color:'#2D4059',
-    
+    color: '#2D4059',
+
   },
   button: {
     backgroundColor: '#F07B3F',
@@ -294,7 +419,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
-    
+
   },
   locationText: {
     fontSize: 16,
@@ -347,22 +472,45 @@ const styles = StyleSheet.create({
   },
 
   //ViewShift
-  shiftContainer: {
-    backgroundColor: '#eee',
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 5,
-  },
-  shiftTitle: {
+  day: {
+    fontSize: 16,
     fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  date: {
+    fontSize: 14,
     marginBottom: 5,
   },
-  shiftText: {
-    fontSize: 16,
-    marginBottom: 3,
+  time: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
-  noShiftsText: {
-    fontSize: 18,
-    fontStyle: 'italic',
+  shiftContainer: {
+    width: '78%', // Set the width of the shift container to be 90% of the screen
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    paddingBottom: 10,
+    marginBottom: 20,
+    top: 180,
+    left: 30,
   },
+
+  shiftButtonText: {
+    color: 'green',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+
+  },
+  editButton: {
+    padding: 10,
+    borderRadius: 5,
+    backgroundColor: '#00bfff',
+    bottom: 90,
+    alignSelf: 'center',
+  },
+
 })
