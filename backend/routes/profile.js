@@ -99,6 +99,26 @@ router.delete('/deleteShift', (req, res, next) => {
     })
 })
 
+router.put('/updateShift', (req, res, next) => {
+  ScheduledShift.findOne({ _id: req.body._id })
+  .then(shift => {
+    if (!shift) {
+      console.log('Failed to find shift')
+      res.send('No shift found')
+    } else {
+      shift.startTime = req.body.startTime
+      shift.endTime = req.body.endTime
+      shift.save()
+      console.log('Updated shift!')
+      res.send('Shift updated')
+    }
+  })
+  .catch(err => {
+    console.log('Failed to find shift: ' + err)
+    res.send('Failed to update shift')
+  })
+})
+
 // router.post('/', (req, res, next) => {
 //   console.log(req.body.testData)
 //   Product.find() // Always returns an array

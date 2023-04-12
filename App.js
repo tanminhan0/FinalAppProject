@@ -84,8 +84,10 @@ const ProfileScreen = ({ navigation }) => {
 const ViewScreen = () => {
   const [scheduledShifts, setScheduledShifts] = useState([]);
   const [editShift, setEditShift] = useState(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [dateTimePickerValue, setDateTimePickerValue] = useState(null);
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
   useEffect(() => {
     // Fetch scheduled shifts from database and update state
@@ -139,11 +141,32 @@ const ViewScreen = () => {
       console.log(err);
     }
   }
+
+  const updateAPI = async (shift) => {
+    try {
+      const res = await fetch(
+        `https://7478-193-1-57-1.ngrok-free.app/updateShift`,
+        {
+          method: "PUT",
+          headers: {
+            'Content-Type': 'application/json',
+            "ngrok-skip-browser-warning": "69420"
+          },
+          body: JSON.stringify(shift),
+        }
+      );
+      const data = await res.text();
+      console.log(data);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   const handlePressShift = (item) => {
     // set editShift to the selected shift for editing
     setEditShift(item);
-    setShowDatePicker(true);
-    setDateTimePickerValue(new Date(item.startTime));
+    setShowStartDatePicker(item.startTime);
+    setShowEndDatePicker(item.endTime);
   }
 
   const handleEditShift = () => {
@@ -151,13 +174,17 @@ const ViewScreen = () => {
     const updatedScheduledShifts = scheduledShifts.map((shift) => {
       if (shift._id === editShift._id) {
         const updatedShift = { ...shift };
-        updatedShift.startTime = dateTimePickerValue;
-        updatedShift.endTime = moment(dateTimePickerValue).add(8, 'hours').toDate();
+        updatedShift.startTime = startDate;
+        updatedShift.endTime = endDate;
+        updateAPI(updatedShift);
+       
         return updatedShift;
       }
       return shift;
     });
     setScheduledShifts(updatedScheduledShifts);
+    setShowStartDatePicker(false);
+    setShowEndDatePicker(false);
     setEditShift(null);
   }
 
@@ -183,12 +210,21 @@ const ViewScreen = () => {
     );
   }
 
-  const handleDateTimePickerChange = (event, selectedDate) => {
-    setDateTimePickerValue(selectedDate);
+  const handleStartDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || startDate;
+    setShowStartDatePicker(Platform.OS === 'ios');
+    setStartDate(currentDate);
+  };
+
+  const handleEndDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || endDate;
+    setShowEndDatePicker(Platform.OS === 'ios');
+    setEndDate(currentDate);
   };
 
   const handleDateTimePickerCancel = () => {
-    setShowDatePicker(false);
+    setShowStartDatePicker(false);
+    setShowEndDatePicker(false);
     setEditShift(null);
   };
 
@@ -230,16 +266,29 @@ const ViewScreen = () => {
           <Text style={styles.noShiftsText}>No scheduled shifts found</Text>
         )}
 
-      {showDatePicker && (
+      {showStartDatePicker && (
         <DateTimePicker
-          value={dateTimePickerValue}
+          value={startDate}
           mode="datetime"
           is24Hour={true}
           display="default"
-          style={{ position: 'absolute', alignSelf:'center', bottom: 130 }}
-          onChange={handleDateTimePickerChange}
+          style={{ position: 'absolute', alignSelf:'center', bottom: 160 }}
+          onChange={handleStartDateChange}
           onCancel={handleDateTimePickerCancel}
         />
+        
+      )}
+      {showEndDatePicker && (
+        <DateTimePicker
+          value={endDate}
+          mode="datetime"
+          is24Hour={true}
+          display="default"
+          style={{ position: 'absolute', alignSelf:'center', bottom: 120 }}
+          onChange={handleEndDateChange}
+          onCancel={handleDateTimePickerCancel}
+        />
+        
       )}
       {editShift && (
         <TouchableOpacity
@@ -530,7 +579,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     backgroundColor: '#00bfff',
-    bottom: 90,
+    bottom: 80,
     alignSelf: 'center',
   },
 
