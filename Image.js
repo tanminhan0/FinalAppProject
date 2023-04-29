@@ -6,6 +6,9 @@ import * as Permissions from 'expo-permissions';
 export const ImgPicker = props => {
   const [pickedImage, setPickedImage] = useState();
 
+  
+  
+
   const verifyPermissions = async () => {
     const result = await Permissions.askAsync( Permissions.CAMERA_ROLL, Permissions.CAMERA)
     let succss = false
@@ -32,11 +35,13 @@ export const ImgPicker = props => {
     const image = await ImagePicker.launchCameraAsync({
       cameraType: 'front',
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: [1, 1],
       quality: 0.5
     });
 
+   
     setPickedImage(image.uri);
+    props.onImageCapture(image.uri);
 
   };
 
@@ -44,9 +49,9 @@ export const ImgPicker = props => {
     <View style={styles.imagePicker}>
       <View style={styles.imagePreview}>
         {!pickedImage ? (
-          <Text>No Check In yet.</Text>
+          <Text>No Image for Check-In yet.</Text>
         ) : (
-          <Image style={styles.image} source={{ uri: pickedImage }} />
+          <Image style={styles.image} source={{ uri: pickedImage }} resizeMode="cover" />
         )}
       </View>
       <TouchableOpacity style={styles.checkInButton} onPress={() => takeImageHandler()}>
@@ -61,34 +66,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    height: '100%'
+    height: '100%',
   },
   imagePreview: {
-    width: '100%',
+    width: '80%',
     height: 200,
     marginBottom: 10,
     justifyContent: 'center',
     alignItems: 'center',
     borderColor: '#ccc',
-    borderWidth: 1
+    borderWidth: 1, 
+    borderRadius: 10, 
   },
   image: {
-    width: '100%',
-    height: '100%'
+    width: '100%', // fill the container
+    height: '100%',
+    borderRadius: 10,
   },
-  checkInButton:{
+  checkInButton: {
     backgroundColor: '#F07B3F',
     padding: 12,
     borderRadius: 8,
     marginTop: 30,
+    minWidth: 160, 
+    alignItems: 'center', 
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
-    
   },
 });
+
 
 export default ImgPicker;

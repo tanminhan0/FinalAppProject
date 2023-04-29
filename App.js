@@ -66,15 +66,15 @@ const ProfileScreen = ({ navigation }) => {
       <Image source={profilePic} style={styles.profilePic} />
       <Text style={styles.name}>TAN MIN HAN</Text>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('ViewShift')}>
+      <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate('ViewShift')}>
         <Text style={styles.buttonText}>View Scheduled Shifts</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('ScheduleShift')}>
+      <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate('ScheduleShift')}>
         <Text style={styles.buttonText}>Schedule Shifts</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('CheckIn')}>
+      <TouchableOpacity style={styles.profileButton} onPress={() => navigation.navigate('CheckIn')}>
         <Text style={styles.buttonText}>Check In</Text>
       </TouchableOpacity>
     </View>
@@ -98,7 +98,7 @@ const ViewScreen = () => {
 
     try {
       const res = await fetch(
-        `https://7478-193-1-57-1.ngrok-free.app/scheduledshifts`,
+        `https://cd11-193-1-57-1.ngrok-free.app/scheduledshifts`,
         {
           method: 'GET',
           headers: {
@@ -122,7 +122,7 @@ const ViewScreen = () => {
   const deleteAPI = async (id) => {
     try {
       const res = await fetch(
-        `https://7478-193-1-57-1.ngrok-free.app/deleteShift`,
+        `https://cd11-193-1-57-1.ngrok-free.app/deleteShift`,
         {
           method: 'DELETE',
           headers: {
@@ -145,7 +145,7 @@ const ViewScreen = () => {
   const updateAPI = async (shift) => {
     try {
       const res = await fetch(
-        `https://7478-193-1-57-1.ngrok-free.app/updateShift`,
+        `https://cd11-193-1-57-1.ngrok-free.app/updateShift`,
         {
           method: "PUT",
           headers: {
@@ -337,7 +337,7 @@ const ScheduleScreen = () => {
     );
     try {
       const res = await fetch(
-        `https://7478-193-1-57-1.ngrok-free.app/scheduleShift`,
+        `https://cd11-193-1-57-1.ngrok-free.app/scheduleShift`,
         {
           method: 'POST',
           headers: {
@@ -363,7 +363,8 @@ const ScheduleScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Schedule Shifts</Text>
+      <Text style={styles.title}>Workees</Text>
+      <Text style={styles.scheduleTitle}>Schedule Your Shifts!</Text>
       <TouchableOpacity style={styles.datePickerButton} onPress={showStartDatepicker}>
         <Text style={styles.datePickerButtonText}>Start Date: {startDate.toLocaleString()}</Text>
       </TouchableOpacity>
@@ -378,7 +379,7 @@ const ScheduleScreen = () => {
         <DateTimePicker value={endDate} mode='datetime' is24Hour={true} minuteInterval={30}
           display='default' onChange={handleEndDateChange} />
       )}
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+      <TouchableOpacity style={styles.scheduleButton} onPress={handleSubmit}>
         <Text style={styles.submitButtonText}>Submit</Text>
       </TouchableOpacity>
     </View>
@@ -390,6 +391,9 @@ const WorkCheckInScreen = () => {
   const [location, setLocation] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
   const [checkInTime, setCheckInTime] = useState(null);
+  const [checkInButtonDisabled, setCheckInButtonDisabled] = useState(true);
+  const [pickedImage, setPickedImage] = useState();
+
 
   useEffect(() => {
     (async () => {
@@ -401,6 +405,12 @@ const WorkCheckInScreen = () => {
 
     })();
   }, []);
+  
+  
+  const handleImageCapture = (imageUri) => {
+    setCheckInButtonDisabled(!imageUri);
+    setPickedImage(imageUri);
+  };
 
   const handleCheckIn = async () => {
     try {
@@ -413,11 +423,26 @@ const WorkCheckInScreen = () => {
       let location = await Location.getCurrentPositionAsync({});
       setLocation(location);
       setCheckInTime(new Date().toLocaleString());
+
+      const response = await fetch('https://cd11-193-1-57-1.ngrok-free.app/checkin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          checkInTime: new Date().toISOString(),
+          lat: location.coords.latitude,
+          long: location.coords.longitude,
+          image: pickedImage,
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Something went wrong!');
+      }
+  
+      Alert.alert('Check-in successful', 'Your check-in has been recorded.', [{ text: 'OK' }]);
       console.log('Checked in at', location.coords.latitude, location.coords.longitude);
-      Alert.alert(
-        'Check In Successfully!',
-        'Checked in with location and time!'
-      );
       sendPushNotificationHandler('Conor');
 
     } catch (error) {
@@ -425,23 +450,25 @@ const WorkCheckInScreen = () => {
       setErrorMsg(error.message);
       setCheckInTime(null);
       console.error(error);
+      Alert.alert('Error', 'Failed to check-in. Please try again.', [{ text: 'OK' }]);
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Check-In</Text>
-      <ImgPicker />
-      {location && (
-        <Text style={styles.locationText}>
-          {location.coords.latitude}, {location.coords.longitude}
-        </Text>
-      )}
+      <ImgPicker onImageCapture={handleImageCapture} />
+      
       {errorMsg && <Text style={styles.errorText}>{errorMsg}</Text>}
       {checkInTime && <Text style={styles.timeText}>Checked in at: {checkInTime}</Text>}
+      {location && (
+        <Text style={styles.locationText}>
+          Location: {location.coords.latitude}, {location.coords.longitude}
+        </Text>
+      )}
       <View style={styles.checkInButtonContainer}>
-        <TouchableOpacity onPress={handleCheckIn}>
-          <Text style={styles.checkInButton}>Check In</Text>
+        <TouchableOpacity style={styles.checkInButton} onPress={handleCheckIn}   disabled={checkInButtonDisabled}>
+          <Text style={styles.checkInText}>Check In</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -491,8 +518,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
 
   },
-  locationText: {
+  locationTitle: {
     fontSize: 16,
+    marginVertical: 10,
+    position: 'absolute',
+    bottom: 150,
+  },
+  locationText: {
+    fontSize: 10,
     marginVertical: 10,
     position: 'absolute',
     bottom: 150,
@@ -515,10 +548,19 @@ const styles = StyleSheet.create({
     bottom: 200,
   },
   checkInButton: {
-    backgroundColor: 'lightpink',
-    color: 'white',
+    backgroundColor: '#F07B3F',
     padding: 12,
     borderRadius: 8,
+    marginTop: 30,
+    minWidth: 160,
+    alignItems: 'center', 
+  },
+  checkInText:{
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+
   },
   datePickerButton: {
     padding: 10,
@@ -539,6 +581,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  //Profile Screen
+
+  profileButton: {
+    backgroundColor: '#F07B3F',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 24,
+    minWidth: 200,
+    alignItems: 'center',
+  },
+
+  //ScheduleShift
+  scheduleContainer: {
+    alignItems: 'center',
+    padding: 20,
+  },
+  scheduleTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 32,
+    color: '#2D4059',
+  },
+  scheduleButton: {
+    backgroundColor: '#F07B3F',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 24,
+    minWidth: 200,
+    alignItems: 'center',
   },
 
   //ViewShift

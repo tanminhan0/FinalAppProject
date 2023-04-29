@@ -18,10 +18,13 @@ const shiftSchema = new mongoose.Schema({
 });
 
 const checkInSchema = new mongoose.Schema({
+  //user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   checkInTime: { type: Date, required: true },
-  location: { type: String, required: true },
-  image: { type: Buffer },
+  lat: { type: String, required: true },
+  long: { type: String, required: true },
+  image: { type: String, required: true },
 });
+
 
 const scheduledShiftSchema = new mongoose.Schema({
   startTime: { type: Date, required: true },
@@ -34,7 +37,6 @@ const CheckIn = mongoose.model('CheckIn', checkInSchema);
 const ScheduledShift = mongoose.model('ScheduledShift', scheduledShiftSchema);
 
 
-// const Product = mongoose.model('Product', productSchema) // 'Product' refers to the collection, so maps products collection to productSchema; see lecture notes
 
 let nextUserId = 0;
 
@@ -118,6 +120,31 @@ router.put('/updateShift', (req, res, next) => {
     res.send('Failed to update shift')
   })
 })
+
+router.post('/checkin', (req, res, next) => {
+  const { checkInTime, lat, long, image } = req.body; //userid
+  const checkIn = new CheckIn({
+    //user: userId,
+    checkInTime,
+    lat,
+    long,
+    image: image, //Buffer.from(image, 'base64'),
+  });
+
+  checkIn.save()
+    .then(result => {
+      res.status(201).json({
+        message: 'Check-in created successfully',
+        checkIn: result
+      });
+    })
+    .catch(err => {
+      console.log('Failed to save check-in to database: ' + err);
+      res.status(500).json({
+        error: err
+      });
+    });
+});
 
 // router.post('/', (req, res, next) => {
 //   console.log(req.body.testData)
